@@ -66,6 +66,9 @@ function despachar() {
     if ($cf <= 0) { fail('Ingresá la cantidad procesada'); return; }
     if ($cf + $rez > $disp) { fail("La cantidad + rezagos ($cf + $rez) supera lo pendiente ($disp)"); return; }
 
+    // Sector DESPACHO (110): el lote terminó la ruta → enviar a Administración (120).
+    if ($sector === 110) { despacharAdmin($num, $ord, $lot, $cf, $rez, $obs, $disp); return; }
+
     // Próximo proceso y su sector destino
     $maxPrc = (int) (db_row("SELECT MAX(ORDODP) AS m FROM [Tbl Ordenes De Proceso Procesos] WHERE NUMODP=$num;")['m'] ?? 0);
     $nextOrd = $ord + 1;
@@ -123,5 +126,55 @@ function despachar() {
     } catch (Exception $e) {
         db_rollback();
         fail('No se pudo despachar: ' . $e->getMessage(), 500);
+    }
+}
+
+/**
+ * Envío a Administración (Frm Despacho SetData "M", camino normal): el lote terminó
+ * la ruta y está en DESPACHO (110). Crea el lote final hacia Administración (120),
+ * descompromete el lote de entrada, completa fechas/cantidades de entrega en la cabecera
+ * y, si no quedan lotes pendientes en ese tramo, pasa la orden a CODETA=120.
+ */
+function despacharAdmin($num, $ord, $lot, $cf, $rez, $obs, $disp) {
+    $nextOrd = $ord + 1;
+    $maxLot = (int) (db_row("SELECT MAX(LOTODP) AS m FROM [Tbl Ordenes De Proceso Lotes] WHERE NUMODP=$num AND ORDODP=$nextOrd;")['m'] ?? 0);
+    $newLot = $maxLot + 1;
+    $rc = db_row("SELECT FECAPE FROM [Rec Control];");
+    $iso = to_iso_date($rc['FECAPE']); $p = explode('-', $iso);
+    $f = "#{$p[1]}/{$p[2]}/{$p[0]}#";
+    $obsSql = $obs === '' ? 'Null' : "'" . db_esc($obs) . "'";
+
+    $h = db_row("SELECT CIDODP, FIDODP FROM [Tbl Ordenes De Proceso] WHERE NUMODP=$num;");
+    $cid = (int) ($h['CIDODP'] ?? 0) + $cf;
+    $primero = empty($h['FIDODP']);
+
+    db_begin();
+    try {
+        // 1) Lote final → Administración (120)
+        $lc = ['NUMODP', 'OPOODP', 'LPOODP', 'CSOODP', 'LOTODP', 'FEXODP', 'FIPODP', 'HIPODP', 'FFPODP', 'HFPODP',
+               'CANODP', 'REZODP', 'DSPODP', 'OBSODP', 'ORDODP', 'CSDODP'];
+        // CSOODP = Null y CODETA = -120: estado en que Administración deja el lote/orden
+        // (uniforme en 7613 órdenes reales; lo crea la app de Administración al recibir).
+        $lv = [$num, $ord, $lot, 'Null', $newLot, $f, $f, 'Now()', $f, 'Now()',
+               $cf, $rez, $cf, $obsSql, $nextOrd, '120'];
+        db_exec("INSERT INTO [Tbl Ordenes De Proceso Lotes] ([" . implode('],[', $lc) . "]) VALUES (" . implode(',', $lv) . ");");
+
+        // 2) Descomprometer el lote de entrada (en DESPACHO)
+        db_exec("UPDATE [Tbl Ordenes De Proceso Lotes] SET DSPODP = " . ($disp - $cf - $rez) .
+                " WHERE NUMODP=$num AND ORDODP=$ord AND LOTODP=$lot;");
+
+        // 3) Cabecera: fechas/cantidades de despacho a entrega
+        $sets = "CIDODP=$cid, CFDODP=$cid, FDXODP=$f, FFDODP=$f, HFDODP=Now()";
+        if ($primero) $sets .= ", FIDODP=$f, HIDODP=Now(), OIDODP=$obsSql";
+        // ¿quedan lotes pendientes en este tramo? si no, la orden pasa a Administración
+        $pend = db_row("SELECT COUNT(*) AS n FROM [Tbl Ordenes De Proceso Lotes] WHERE NUMODP=$num AND ORDODP=$ord AND DSPODP>0;");
+        if (!$pend || (int) $pend['n'] === 0) $sets .= ", CODETA=-120";
+        db_exec("UPDATE [Tbl Ordenes De Proceso] SET $sets WHERE NUMODP=$num;");
+
+        db_commit();
+        ok(['numodp' => $num, 'admin' => true]);
+    } catch (Exception $e) {
+        db_rollback();
+        fail('No se pudo enviar a Administración: ' . $e->getMessage(), 500);
     }
 }

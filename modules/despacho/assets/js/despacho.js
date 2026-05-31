@@ -55,7 +55,8 @@ const Desp = {
         var j = await (await fetch('api.php?action=despachar', { method: 'POST', body: fd })).json();
         if (!j.ok) { this.el('dErr').textContent = j.error || 'Error'; return; }
         this.modal.hide();
-        this.toast('Lote despachado' + (j.data.despacho ? ' (a Despacho/Administración)' : ''), 'success');
+        var msg = j.data.admin ? 'Lote enviado a Administración' : ('Lote despachado' + (j.data.despacho ? ' (a Despacho)' : ''));
+        this.toast(msg, 'success');
         this.load();
     },
 
