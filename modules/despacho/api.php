@@ -153,9 +153,11 @@ function despacharAdmin($num, $ord, $lot, $cf, $rez, $obs, $disp) {
         // 1) Lote final → Administración (120)
         $lc = ['NUMODP', 'OPOODP', 'LPOODP', 'CSOODP', 'LOTODP', 'FEXODP', 'FIPODP', 'HIPODP', 'FFPODP', 'HFPODP',
                'CANODP', 'REZODP', 'DSPODP', 'OBSODP', 'ORDODP', 'CSDODP'];
-        // CSOODP = Null y CODETA = -120: estado en que Administración deja el lote/orden
-        // (uniforme en 7613 órdenes reales; lo crea la app de Administración al recibir).
-        $lv = [$num, $ord, $lot, 'Null', $newLot, $f, $f, 'Now()', $f, 'Now()',
+        // CSOODP = sector origen (110 DESPACHO), CSDODP = 120 ADMINISTRACION — fiel al
+        // Frm Despacho. NOTA: las órdenes históricas tienen CSOODP=null y CODETA=-120 (este
+        // último es una optimización retroactiva de Paul para que la consulta x Lote no liste
+        // las viejas). Una orden NUEVA va a +120 → así la consulta la muestra como nueva.
+        $lv = [$num, $ord, $lot, '110', $newLot, $f, $f, 'Now()', $f, 'Now()',
                $cf, $rez, $cf, $obsSql, $nextOrd, '120'];
         db_exec("INSERT INTO [Tbl Ordenes De Proceso Lotes] ([" . implode('],[', $lc) . "]) VALUES (" . implode(',', $lv) . ");");
 
@@ -168,7 +170,7 @@ function despacharAdmin($num, $ord, $lot, $cf, $rez, $obs, $disp) {
         if ($primero) $sets .= ", FIDODP=$f, HIDODP=Now(), OIDODP=$obsSql";
         // ¿quedan lotes pendientes en este tramo? si no, la orden pasa a Administración
         $pend = db_row("SELECT COUNT(*) AS n FROM [Tbl Ordenes De Proceso Lotes] WHERE NUMODP=$num AND ORDODP=$ord AND DSPODP>0;");
-        if (!$pend || (int) $pend['n'] === 0) $sets .= ", CODETA=-120";
+        if (!$pend || (int) $pend['n'] === 0) $sets .= ", CODETA=120";
         db_exec("UPDATE [Tbl Ordenes De Proceso] SET $sets WHERE NUMODP=$num;");
 
         db_commit();
