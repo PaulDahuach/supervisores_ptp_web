@@ -50,6 +50,20 @@ return [
         ],
     ],
 
+    // Tablero: indicadores de MI sector ({SECTOR} = sector activo) + acceso rápido.
+    'dashboard' => [
+        'kpis' => [
+            ['label' => 'Lotes en mi sector',    'icon' => 'bi-truck',    'color' => '#10b981', 'url' => '/modules/despacho/',
+             'sql' => "SELECT Count(*) AS N FROM [Tbl Ordenes De Proceso Lotes] WHERE CSDODP={SECTOR} AND DSPODP>0;"],
+            ['label' => 'Prendas pendientes',     'icon' => 'bi-stack',    'color' => '#0ea5e9', 'url' => '/modules/despacho/',
+             'sql' => "SELECT Int(Sum(DSPODP)) AS N FROM [Tbl Ordenes De Proceso Lotes] WHERE CSDODP={SECTOR} AND DSPODP>0;"],
+        ],
+        'quick' => [
+            ['label' => 'Despacho de Lotes', 'icon' => 'bi-truck',            'url' => '/modules/despacho/'],
+            ['label' => 'Portal',            'icon' => 'bi-grid-3x3-gap-fill', 'url' => 'http://localhost/ptp_portal/'],
+        ],
+    ],
+
     'afip' => ['enabled' => false],
     'deploy_key'  => 'sup_ptp_2026_cambiar',
 ];
