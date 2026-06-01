@@ -48,14 +48,14 @@ function auth_require_login($login_url = null) {
 
 /** Nombre del usuario logueado. */
 function auth_user() {
-    return $_SESSION['uname'] ?? 'Usuario';
+    return (isset($_SESSION['uname']) ? $_SESSION['uname'] : 'Usuario');
 }
 
 /** Sectores que puede operar el usuario actual (config 'sector_login'). */
 function auth_sectors() {
     $sl = sys('sector_login');
     if (!$sl) return [];
-    $uid = intval($_SESSION['uid'] ?? 0);
+    $uid = intval((isset($_SESSION['uid']) ? $_SESSION['uid'] : 0));
     $sql = "SELECT DISTINCT S.[{$sl['sec_pk']}] AS id, S.[{$sl['sec_den']}] AS den
             FROM [{$sl['rel_tabla']}] AS R INNER JOIN [{$sl['sec_tabla']}] AS S
               ON R.[{$sl['rel_sector']}] = S.[{$sl['sec_pk']}]
@@ -69,8 +69,8 @@ function auth_set_sector($cod, $name) {
     $_SESSION['sector_name'] = $name;
 }
 
-function auth_sector()      { return $_SESSION['sector'] ?? null; }
-function auth_sector_name() { return $_SESSION['sector_name'] ?? ''; }
+function auth_sector()      { return (isset($_SESSION['sector']) ? $_SESSION['sector'] : null); }
+function auth_sector_name() { return (isset($_SESSION['sector_name']) ? $_SESSION['sector_name'] : ''); }
 
 /** Busca un usuario por su contraseña (paso 1 del login, como RDN). */
 function auth_lookup_by_pass($pass) {

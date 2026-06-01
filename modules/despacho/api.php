@@ -10,7 +10,7 @@ require_once __DIR__ . '/../../includes/helpers.php';
 require_once __DIR__ . '/../../includes/auth.php';
 auth_require_login();
 
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
+$action = (isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : ''));
 try {
     switch ($action) {
         case 'list':     listar(); break;
@@ -50,12 +50,12 @@ function despachar() {
     $sector = intval(auth_sector());
     if ($sector <= 0) { fail('Sin sector activo'); return; }
 
-    $num = intval($_POST['numodp'] ?? 0);
-    $ord = intval($_POST['ordodp'] ?? 0);   // orden del proceso actual (en mi sector)
-    $lot = intval($_POST['lotodp'] ?? 0);
-    $cf  = (int) round((float) str_replace(',', '.', $_POST['cant'] ?? '0'));   // cantidad procesada (buena)
-    $rez = (int) round((float) str_replace(',', '.', $_POST['rez'] ?? '0'));    // rezagos
-    $obs = trim($_POST['obs'] ?? '');
+    $num = intval((isset($_POST['numodp']) ? $_POST['numodp'] : 0));
+    $ord = intval((isset($_POST['ordodp']) ? $_POST['ordodp'] : 0));   // orden del proceso actual (en mi sector)
+    $lot = intval((isset($_POST['lotodp']) ? $_POST['lotodp'] : 0));
+    $cf  = (int) round((float) str_replace(',', '.', (isset($_POST['cant']) ? $_POST['cant'] : '0')));   // cantidad procesada (buena)
+    $rez = (int) round((float) str_replace(',', '.', (isset($_POST['rez']) ? $_POST['rez'] : '0')));    // rezagos
+    $obs = trim((isset($_POST['obs']) ? $_POST['obs'] : ''));
 
     // Validar el lote de entrada y que esté en MI sector
     $L = db_row("SELECT DSPODP, CSDODP FROM [Tbl Ordenes De Proceso Lotes]
@@ -70,16 +70,16 @@ function despachar() {
     if ($sector === 110) { despacharAdmin($num, $ord, $lot, $cf, $rez, $obs, $disp); return; }
 
     // Próximo proceso y su sector destino
-    $maxPrc = (int) (db_row("SELECT MAX(ORDODP) AS m FROM [Tbl Ordenes De Proceso Procesos] WHERE NUMODP=$num;")['m'] ?? 0);
+    $maxPrc = (int) ((isset(db_row("SELECT MAX(ORDODP) AS m FROM [Tbl Ordenes De Proceso Procesos] WHERE NUMODP=$num;")['m']) ? db_row("SELECT MAX(ORDODP) AS m FROM [Tbl Ordenes De Proceso Procesos] WHERE NUMODP=$num;")['m'] : 0));
     $nextOrd = $ord + 1;
     if ($nextOrd <= $maxPrc) {
         $cp = db_row("SELECT CODPRC FROM [Tbl Ordenes De Proceso Procesos] WHERE NUMODP=$num AND ORDODP=$nextOrd;");
-        $sec = db_row("SELECT CODETA FROM [Tbl Procesos] WHERE CODPRC=" . intval($cp['CODPRC'] ?? 0) . ";");
-        $nextSector = intval($sec['CODETA'] ?? 110);
+        $sec = db_row("SELECT CODETA FROM [Tbl Procesos] WHERE CODPRC=" . intval((isset($cp['CODPRC']) ? $cp['CODPRC'] : 0)) . ";");
+        $nextSector = intval((isset($sec['CODETA']) ? $sec['CODETA'] : 110));
     } else {
         $nextSector = 110;   // DESPACHO (último proceso → administración)
     }
-    $maxLot = (int) (db_row("SELECT MAX(LOTODP) AS m FROM [Tbl Ordenes De Proceso Lotes] WHERE NUMODP=$num AND ORDODP=$nextOrd;")['m'] ?? 0);
+    $maxLot = (int) ((isset(db_row("SELECT MAX(LOTODP) AS m FROM [Tbl Ordenes De Proceso Lotes] WHERE NUMODP=$num AND ORDODP=$nextOrd;")['m']) ? db_row("SELECT MAX(LOTODP) AS m FROM [Tbl Ordenes De Proceso Lotes] WHERE NUMODP=$num AND ORDODP=$nextOrd;")['m'] : 0));
     $newLot = $maxLot + 1;
 
     $rc = db_row("SELECT FECAPE FROM [Rec Control];");
@@ -89,7 +89,7 @@ function despachar() {
 
     // valores actuales del proceso origen/destino (evito Nz en SQL: no siempre está en ACE)
     $opOri = db_row("SELECT DSPODP FROM [Tbl Ordenes De Proceso Procesos] WHERE NUMODP=$num AND ORDODP=$ord;");
-    $oriDsp = (int) ($opOri['DSPODP'] ?? 0);
+    $oriDsp = (int) ((isset($opOri['DSPODP']) ? $opOri['DSPODP'] : 0));
     $opDst = ($nextOrd <= $maxPrc)
         ? db_row("SELECT CANODP, DSPODP, REZODP FROM [Tbl Ordenes De Proceso Procesos] WHERE NUMODP=$num AND ORDODP=$nextOrd;")
         : null;
@@ -113,9 +113,9 @@ function despachar() {
 
         // 4) Acumular en el proceso destino (si existe)
         if ($opDst !== null) {
-            $nCan = (int) ($opDst['CANODP'] ?? 0) + ($cf - $rez);
-            $nDsp = (int) ($opDst['DSPODP'] ?? 0) + $cf;
-            $nRez = (int) ($opDst['REZODP'] ?? 0) + $rez;
+            $nCan = (int) ((isset($opDst['CANODP']) ? $opDst['CANODP'] : 0)) + ($cf - $rez);
+            $nDsp = (int) ((isset($opDst['DSPODP']) ? $opDst['DSPODP'] : 0)) + $cf;
+            $nRez = (int) ((isset($opDst['REZODP']) ? $opDst['REZODP'] : 0)) + $rez;
             db_exec("UPDATE [Tbl Ordenes De Proceso Procesos]
                      SET CANODP=$nCan, DSPODP=$nDsp, REZODP=$nRez
                      WHERE NUMODP=$num AND ORDODP=$nextOrd;");
@@ -137,7 +137,7 @@ function despachar() {
  */
 function despacharAdmin($num, $ord, $lot, $cf, $rez, $obs, $disp) {
     $nextOrd = $ord + 1;
-    $maxLot = (int) (db_row("SELECT MAX(LOTODP) AS m FROM [Tbl Ordenes De Proceso Lotes] WHERE NUMODP=$num AND ORDODP=$nextOrd;")['m'] ?? 0);
+    $maxLot = (int) ((isset(db_row("SELECT MAX(LOTODP) AS m FROM [Tbl Ordenes De Proceso Lotes] WHERE NUMODP=$num AND ORDODP=$nextOrd;")['m']) ? db_row("SELECT MAX(LOTODP) AS m FROM [Tbl Ordenes De Proceso Lotes] WHERE NUMODP=$num AND ORDODP=$nextOrd;")['m'] : 0));
     $newLot = $maxLot + 1;
     $rc = db_row("SELECT FECAPE FROM [Rec Control];");
     $iso = to_iso_date($rc['FECAPE']); $p = explode('-', $iso);
@@ -145,7 +145,7 @@ function despacharAdmin($num, $ord, $lot, $cf, $rez, $obs, $disp) {
     $obsSql = $obs === '' ? 'Null' : "'" . db_esc($obs) . "'";
 
     $h = db_row("SELECT CIDODP, FIDODP FROM [Tbl Ordenes De Proceso] WHERE NUMODP=$num;");
-    $cid = (int) ($h['CIDODP'] ?? 0) + $cf;
+    $cid = (int) ((isset($h['CIDODP']) ? $h['CIDODP'] : 0)) + $cf;
     $primero = empty($h['FIDODP']);
 
     db_begin();

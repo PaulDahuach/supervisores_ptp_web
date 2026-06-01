@@ -17,7 +17,7 @@ auth_require_login();   // protege también la API
 // Tabla de origen en la .mdb (cambiá esto al portar)
 define('TABLE', 'Tbl Ejemplo');
 
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
+$action = (isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : ''));
 
 try {
     switch ($action) {

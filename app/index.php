@@ -9,8 +9,8 @@ $primary = sys('primary', '#2563eb');
 $menu    = sys('menu', []);
 $ro      = db_readonly();
 $dash    = sys('dashboard', []);
-$kpis    = $dash['kpis'] ?? [];
-$quick   = $dash['quick'] ?? [];
+$kpis    = (isset($dash['kpis']) ? $dash['kpis'] : []);
+$quick   = (isset($dash['quick']) ? $dash['quick'] : []);
 
 // Indicadores (opcionales). Cada KPI: ['label','sql','icon','color','url'].
 // En la SQL, {SECTOR} se reemplaza por el sector activo (sector_login).
@@ -48,7 +48,7 @@ $saludo = $hh < 13 ? 'Buen día' : ($hh < 20 ? 'Buenas tardes' : 'Buenas noches'
         <div class="side-section"><?= h($section) ?></div>
         <?php foreach ($cards as $c): ?>
           <a class="side-link" href="<?= h(bu($c['url'])) ?>">
-            <i class="bi <?= h($c['icon'] ?? 'bi-dot') ?>"></i><span><?= h($c['label']) ?></span>
+            <i class="bi <?= h((isset($c['icon']) ? $c['icon'] : 'bi-dot')) ?>"></i><span><?= h($c['label']) ?></span>
           </a>
         <?php endforeach; ?>
       <?php endforeach; ?>
@@ -88,8 +88,8 @@ $saludo = $hh < 13 ? 'Buen día' : ($hh < 20 ? 'Buenas tardes' : 'Buenas noches'
       <div class="kpi-row">
         <?php foreach ($kpis as $i => $k): $v = $kpiVals[$i];
           $url = !empty($k['url']) ? bu($k['url']) : null; $tag = $url ? 'a' : 'div'; ?>
-        <<?= $tag ?> class="kpi" style="--c:<?= h($k['color'] ?? $primary) ?>"<?= $url ? ' href="'.h($url).'"' : '' ?>>
-          <div class="kpi-ic"><i class="bi <?= h($k['icon'] ?? 'bi-bar-chart') ?>"></i></div>
+        <<?= $tag ?> class="kpi" style="--c:<?= h((isset($k['color']) ? $k['color'] : $primary)) ?>"<?= $url ? ' href="'.h($url).'"' : '' ?>>
+          <div class="kpi-ic"><i class="bi <?= h((isset($k['icon']) ? $k['icon'] : 'bi-bar-chart')) ?>"></i></div>
           <div class="kpi-body">
             <div class="kpi-num"><?= $v === null ? '—' : number_format($v, 0, ',', '.') ?></div>
             <div class="kpi-lbl"><?= h($k['label']) ?></div>
@@ -103,7 +103,7 @@ $saludo = $hh < 13 ? 'Buen día' : ($hh < 20 ? 'Buenas tardes' : 'Buenas noches'
       <div class="quick-title">Accesos rápidos</div>
       <div class="quick-row">
         <?php foreach ($quick as $q): ?>
-        <a class="quick" href="<?= h(bu($q['url'])) ?>"><i class="bi <?= h($q['icon'] ?? 'bi-arrow-right') ?> me-2"></i><?= h($q['label']) ?></a>
+        <a class="quick" href="<?= h(bu($q['url'])) ?>"><i class="bi <?= h((isset($q['icon']) ? $q['icon'] : 'bi-arrow-right')) ?> me-2"></i><?= h($q['label']) ?></a>
         <?php endforeach; ?>
       </div>
       <?php endif; ?>

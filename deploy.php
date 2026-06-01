@@ -13,7 +13,7 @@ define('DEPLOY_KEY', sys('deploy_key', ''));
 define('TARGET_DIR', __DIR__);
 header('Content-Type: application/json; charset=utf-8');
 
-$key = $_POST['key'] ?? $_GET['key'] ?? $_SERVER['HTTP_X_DEPLOY_KEY'] ?? '';
+$key = (isset($_POST['key']) ? $_POST['key'] : (isset($_GET['key']) ? $_GET['key'] : (isset($_SERVER['HTTP_X_DEPLOY_KEY']) ? $_SERVER['HTTP_X_DEPLOY_KEY'] : '')));
 if (DEPLOY_KEY === '' || $key !== DEPLOY_KEY) {
     http_response_code(403);
     die(json_encode(['ok' => false, 'error' => 'Clave inválida']));
