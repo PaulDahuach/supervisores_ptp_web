@@ -43,6 +43,11 @@ return [
         'Mi sector' => [
             ['label' => 'Despacho de Lotes', 'desc' => 'Mover lotes al próximo proceso', 'icon' => 'bi-truck', 'url' => '/modules/despacho/'],
         ],
+        // Acceso al portal (selector de sistemas). URL absoluta → bu() la respeta.
+        // En producción cambiar localhost por el host/raíz de la LAN.
+        'Acceso' => [
+            ['label' => 'Portal de Sistemas', 'desc' => 'Volver al selector / cambiar de sistema', 'icon' => 'bi-grid-3x3-gap-fill', 'url' => 'http://localhost/ptp_portal/'],
+        ],
     ],
 
     'afip' => ['enabled' => false],

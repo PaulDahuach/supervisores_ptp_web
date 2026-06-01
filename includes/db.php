@@ -33,6 +33,8 @@ function db_readonly() {
  * En dev (localhost/<sistema>/) base_url='/<sistema>' → /<sistema>/app/...
  */
 function bu($path = '') {
+    // URLs absolutas (http://, https://, //) se devuelven sin tocar.
+    if (preg_match('#^(https?:)?//#i', (string) $path)) return $path;
     $b = rtrim((string) sys('base_url', ''), '/');
     if ($path === '' || $path === '/') return $b !== '' ? $b . '/' : '/';
     return $b . '/' . ltrim($path, '/');
